@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Local runtime data (regenerated on demand; Cloudflare deploys use KV, not these files)
+data/*.json
+
+# Source item export — contains cost/pricing data, not needed for deployment
+# (uploaded directly via the admin page instead)
+Items*.xlsx
+
+# Local Claude Code tool permissions (machine-specific, not project config)
+.claude/settings.local.json
+
+# Local Wrangler (Cloudflare) dev state
+.wrangler/

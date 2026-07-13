@@ -1,0 +1,117 @@
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>Inventory Count</title>
+<link rel="stylesheet" href="css/style.css" />
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#6366f1" />
+<link rel="icon" href="icons/favicon.png" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+
+<div class="app">
+  <button id="btnInstallApp" class="btn btn-secondary btn-install hidden" type="button">Install App</button>
+
+  <div id="itemStatusBadge" class="item-status-badge hidden">
+    <span class="dot"></span>
+    <span id="itemStatusText"></span>
+  </div>
+
+  <!-- Screen 1: name entry -->
+  <section id="screen-name" class="screen">
+    <h1>Inventory Count</h1>
+    <p class="hint">Enter your name and location to begin counting.</p>
+    <input id="personName" type="text" placeholder="Your name" autocomplete="name" />
+    <select id="locationSelect">
+      <option value="" disabled selected>Select location…</option>
+    </select>
+    <button id="btnStart" class="btn btn-primary">Start Counting</button>
+    <a href="/admin" class="btn-link admin-link">Admin login</a>
+  </section>
+
+  <!-- Screen 2: counting -->
+  <section id="screen-count" class="screen hidden">
+    <div class="session-card">
+      <div id="rowSwitchUser" class="session-row session-row--action" role="button" tabindex="0" aria-label="Switch user" title="Switch user">
+        <div>
+          <div class="hint">Counting as</div>
+          <div id="personLabel" class="person-label"></div>
+        </div>
+        <span class="icon-btn" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+        </span>
+      </div>
+      <div class="session-divider"></div>
+      <div id="rowEditLocation" class="session-row session-row--action" role="button" tabindex="0" aria-label="Edit location" title="Edit location">
+        <div>
+          <div class="hint">Location</div>
+          <div id="locationLabel" class="person-label"></div>
+        </div>
+        <span class="icon-btn" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+        </span>
+      </div>
+    </div>
+
+    <button id="btnAddItem" class="btn btn-primary btn-large">+ Add Item</button>
+
+    <div id="emptyState" class="empty-state">No items counted yet.</div>
+
+    <ul id="itemList" class="item-list"></ul>
+
+    <button id="btnSubmit" class="btn btn-success btn-large hidden">Submit Count</button>
+  </section>
+
+  <!-- Scanner modal -->
+  <div id="scanModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span>Scan Barcode</span>
+        <button id="btnCloseScan" class="btn-close">&times;</button>
+      </div>
+      <div id="reader"></div>
+      <div class="manual-entry">
+        <span class="hint">Or enter item code manually:</span>
+        <input id="manualCode" type="text" placeholder="Item code" autocapitalize="characters" />
+        <button id="btnManualLookup" class="btn btn-secondary">Lookup</button>
+      </div>
+      <div id="scanError" class="error hidden"></div>
+    </div>
+  </div>
+
+  <!-- Item detail modal (after scan/lookup) -->
+  <div id="itemModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span id="itemModalTitle">Item Found</span>
+        <button id="btnCloseItem" class="btn-close">&times;</button>
+      </div>
+      <div class="item-detail">
+        <div class="field"><label>Item Code</label><div id="detCode" class="value"></div></div>
+        <div class="field"><label>Description</label><div id="detDesc" class="value"></div></div>
+        <div class="field"><label>UOM</label><div id="detUom" class="value"></div></div>
+        <div class="field"><label>Location</label><div id="detLocation" class="value"></div></div>
+        <div class="field">
+          <label for="detQty">Quantity Counted</label>
+          <input id="detQty" type="number" inputmode="decimal" min="0" step="any" placeholder="0" />
+        </div>
+        <div class="field">
+          <label for="detExpiry">Expiry Date (optional)</label>
+          <div class="expiry-wrap">
+            <input id="detExpiry" type="text" inputmode="numeric" maxlength="10" placeholder="DD/MM/YYYY" class="date-input" />
+            <button type="button" id="btnClearExpiry" class="clear-expiry-btn hidden" aria-label="Clear expiry date">&times;</button>
+          </div>
+        </div>
+      </div>
+      <div id="itemModalError" class="error hidden"></div>
+      <button id="btnAddToList" class="btn btn-primary btn-large">Add to List</button>
+    </div>
+  </div>
+</div>
+
+<script src="vendor/html5-qrcode.min.js"></script>
+<script src="js/dialog.js"></script>
+<script src="js/app.js"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js');
+  }
+</script>

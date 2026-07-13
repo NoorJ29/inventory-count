@@ -1,0 +1,24 @@
+{
+  "name": "invsys",
+  "version": "1.0.0",
+  "description": "Mobile inventory counting system with barcode scanning",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "import-items": "node src/importItems.js",
+    "test": "node --test test/*.test.js",
+    "cf:dev": "wrangler dev",
+    "cf:deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "exceljs": "^4.4.0",
+    "express": "^4.19.2",
+    "express-basic-auth": "^1.2.1",
+    "hono": "^4.12.29",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "html5-qrcode": "^2.3.8",
+    "wrangler": "^4.110.0"
+  }
+}

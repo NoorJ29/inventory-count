@@ -1,0 +1,17 @@
+name = "inventory-count"
+main = "src/workerApp.js"
+compatibility_date = "2026-07-10"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = ["/api/*", "/admin"]
+
+[[rules]]
+type = "Text"
+globs = ["**/*.html"]
+
+[[kv_namespaces]]
+binding = "INVENTORY_KV"
+id = "7d4b89c2d96f46fa88818de5a04d766d"

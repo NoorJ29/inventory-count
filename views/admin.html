@@ -1,0 +1,48 @@
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Inventory Admin</title>
+<link rel="stylesheet" href="/css/style.css" />
+
+<div class="admin-wrap">
+  <h1>Physical Inventory Count - Admin</h1>
+
+  <div class="admin-toolbar">
+    <button id="btnExport" class="btn btn-primary">Export to Excel</button>
+    <button id="btnReset" class="btn btn-danger">Export &amp; Reset</button>
+    <label class="btn btn-secondary" style="cursor:pointer;">
+      Upload Item List
+      <input id="fileUpload" type="file" accept=".xlsx" style="display:none;" />
+    </label>
+    <button id="btnClearItems" class="btn btn-danger">Remove Item List</button>
+    <button id="btnRefresh" class="btn btn-secondary">Refresh</button>
+  </div>
+
+  <div id="uploadStatus" class="error hidden"></div>
+
+  <div id="itemMetaNotice" class="item-meta-notice"></div>
+
+  <div id="summaryBar" class="summary-bar"></div>
+
+  <div class="table-scroll">
+    <table class="counts-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Name</th>
+          <th>Location</th>
+          <th>Item Code</th>
+          <th>Description</th>
+          <th>UOM</th>
+          <th>Expiry Date</th>
+          <th>Quantity</th>
+          <th>System Inventory</th>
+          <th>Difference</th>
+        </tr>
+      </thead>
+      <tbody id="countsBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script src="/js/dialog.js"></script>
+<script src="/js/admin.js"></script>
