@@ -96,6 +96,8 @@ async function appendCounts(records) {
       expiryDate: r.expiryDate,
       theoreticalInventory: r.theoreticalInventory,
       difference: r.difference,
+      unitCost: r.unitCost,
+      differenceCost: r.differenceCost,
     }));
     counts.push(...added);
     fs.writeFileSync(COUNTS_JSON, JSON.stringify(counts, null, 2));

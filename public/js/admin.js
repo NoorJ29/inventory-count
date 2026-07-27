@@ -62,16 +62,23 @@
     return order.map((key) => {
       const group = groups.get(key);
       let theoreticalInventory;
+      let unitCost;
       for (const m of group.members) {
         if (typeof m.theoreticalInventory === 'number' && Number.isFinite(m.theoreticalInventory)) {
           theoreticalInventory = m.theoreticalInventory;
+        }
+        if (typeof m.unitCost === 'number' && Number.isFinite(m.unitCost)) {
+          unitCost = m.unitCost;
         }
       }
       const difference = typeof theoreticalInventory === 'number'
         ? group.quantity - theoreticalInventory
         : undefined;
+      const differenceCost = typeof difference === 'number' && typeof unitCost === 'number'
+        ? difference * unitCost
+        : undefined;
       const expiryDates = group.members.map((m) => m.expiryDate).filter(Boolean).sort();
-      return { ...group, theoreticalInventory, difference, expiryDate: expiryDates[0] || '' };
+      return { ...group, theoreticalInventory, difference, unitCost, differenceCost, expiryDate: expiryDates[0] || '' };
     });
   }
 
@@ -104,10 +111,12 @@
             <td>${escapeHtml(g.itemCode)}</td>
             <td>${escapeHtml(g.description)}${renderInfoIcon(g.members, idx)}</td>
             <td>${escapeHtml(g.uom)}</td>
+            <td>${g.unitCost ?? ''}</td>
             <td>${escapeHtml(formatDateDisplay(g.expiryDate))}</td>
             <td>${g.quantity}</td>
             <td>${g.theoreticalInventory ?? ''}</td>
             <td>${formatDifference(g.difference)}</td>
+            <td>${formatDifference(g.differenceCost)}</td>
           </tr>
         `).join('');
         summaryBar.textContent = grouped.length !== rows.length

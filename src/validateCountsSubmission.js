@@ -51,6 +51,11 @@ function validateCountsSubmission(body) {
     // item uploaded before this field existed, or with no Inventory value).
     const theoreticalInventoryRaw = Number(it.theoreticalInventory);
     const theoreticalInventory = Number.isFinite(theoreticalInventoryRaw) ? theoreticalInventoryRaw : 0;
+    // Same reasoning as theoreticalInventory above — reference data from the
+    // item master, defaults to 0 rather than rejecting the submission.
+    const unitCostRaw = Number(it.unitCost);
+    const unitCost = Number.isFinite(unitCostRaw) ? unitCostRaw : 0;
+    const difference = quantity - theoreticalInventory;
     records.push({
       date: countDate,
       person: personName,
@@ -61,7 +66,9 @@ function validateCountsSubmission(body) {
       quantity,
       expiryDate,
       theoreticalInventory,
-      difference: quantity - theoreticalInventory,
+      difference,
+      unitCost,
+      differenceCost: difference * unitCost,
     });
   }
 

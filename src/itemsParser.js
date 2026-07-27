@@ -24,6 +24,7 @@ function parseItemsWorkbook(workbook) {
   const idxBlocked = header.indexOf('Blocked');
   const idxArchive = header.indexOf('Archive');
   const idxInventory = header.indexOf('Inventory');
+  const idxUnitCost = header.indexOf('Unit Cost');
 
   if (idxCode === -1 || idxDesc === -1 || idxUom === -1) {
     throw new Error('Expected columns "No.", "Description", "Base Unit of Measure" not found in uploaded file');
@@ -47,6 +48,7 @@ function parseItemsWorkbook(workbook) {
     seen.add(codeStr);
 
     const inventoryRaw = idxInventory !== -1 ? Number(row[idxInventory]) : 0;
+    const unitCostRaw = idxUnitCost !== -1 ? Number(row[idxUnitCost]) : 0;
 
     items.push({
       code: codeStr,
@@ -54,6 +56,7 @@ function parseItemsWorkbook(workbook) {
       uom: String(row[idxUom] || '').trim(),
       barcode: idxBarcode !== -1 ? String(row[idxBarcode] || '').trim() : '',
       theoreticalInventory: Number.isFinite(inventoryRaw) ? inventoryRaw : 0,
+      unitCost: Number.isFinite(unitCostRaw) ? unitCostRaw : 0,
     });
   }
 

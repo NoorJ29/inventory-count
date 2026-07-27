@@ -106,10 +106,12 @@ apiRouter.get('/admin/counts/export', adminAuth, async (req, res) => {
       itemCode: c.itemCode,
       description: c.description,
       uom: c.uom,
+      unitCost: c.unitCost ?? '',
       expiryDate: isoToDisplayDate(c.expiryDate),
       quantity: c.quantity,
       theoreticalInventory: c.theoreticalInventory ?? '',
       difference: c.difference ?? '',
+      differenceCost: c.differenceCost ?? '',
     }));
     const buffer = await buildExportWorkbook(rows);
 

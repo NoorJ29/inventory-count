@@ -7,10 +7,12 @@ const COLUMNS = [
   { header: 'Item Code', key: 'itemCode' },
   { header: 'Description', key: 'description' },
   { header: 'UOM', key: 'uom' },
+  { header: 'Unit Cost', key: 'unitCost' },
   { header: 'Expiry Date', key: 'expiryDate' },
   { header: 'Quantity', key: 'quantity' },
   { header: 'System Inventory', key: 'theoreticalInventory' },
   { header: 'Difference', key: 'difference' },
+  { header: 'Difference Cost', key: 'differenceCost' },
 ];
 
 function computeWidth(header, rows, key) {

@@ -100,10 +100,12 @@ app.get('/api/admin/counts/export', requireAdminAuth, async (c) => {
       itemCode: cnt.itemCode,
       description: cnt.description,
       uom: cnt.uom,
+      unitCost: cnt.unitCost ?? '',
       expiryDate: isoToDisplayDate(cnt.expiryDate),
       quantity: cnt.quantity,
       theoreticalInventory: cnt.theoreticalInventory ?? '',
       difference: cnt.difference ?? '',
+      differenceCost: cnt.differenceCost ?? '',
     }));
     const buffer = await buildExportWorkbook(rows);
 

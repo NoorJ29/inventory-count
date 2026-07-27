@@ -448,6 +448,7 @@
       quantity: qty,
       expiryDate: expiryDateDisplay,
       theoreticalInventory: Number(currentItem.theoreticalInventory) || 0,
+      unitCost: Number(currentItem.unitCost) || 0,
     };
     if (editIndex !== null) {
       workList[editIndex] = row;
@@ -464,7 +465,7 @@
   function openEditForRow(idx) {
     editIndex = idx;
     const row = workList[idx];
-    currentItem = { code: row.itemCode, description: row.description, uom: row.uom, theoreticalInventory: row.theoreticalInventory };
+    currentItem = { code: row.itemCode, description: row.description, uom: row.uom, theoreticalInventory: row.theoreticalInventory, unitCost: row.unitCost };
     showItemModal(currentItem, row.quantity, row.expiryDate);
   }
 
@@ -494,6 +495,7 @@
       quantity: row.quantity,
       expiryDate: row.expiryDate ? displayDateToIso(row.expiryDate) : '',
       theoreticalInventory: row.theoreticalInventory,
+      unitCost: row.unitCost,
     }));
     fetch('/api/counts', {
       method: 'POST',

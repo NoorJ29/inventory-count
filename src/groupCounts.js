@@ -31,19 +31,26 @@ function groupCounts(rows) {
     const group = groups.get(key);
     // members arrive sorted ascending by timestamp (guaranteed by loadCounts
     // in all storage backends), so the LAST member with a defined numeric
-    // theoreticalInventory is the freshest snapshot for this item — not
-    // necessarily the first-seen one.
+    // theoreticalInventory/unitCost is the freshest snapshot for this item —
+    // not necessarily the first-seen one.
     let theoreticalInventory;
+    let unitCost;
     for (const m of group.members) {
       if (typeof m.theoreticalInventory === 'number' && Number.isFinite(m.theoreticalInventory)) {
         theoreticalInventory = m.theoreticalInventory;
+      }
+      if (typeof m.unitCost === 'number' && Number.isFinite(m.unitCost)) {
+        unitCost = m.unitCost;
       }
     }
     const difference = typeof theoreticalInventory === 'number'
       ? group.quantity - theoreticalInventory
       : undefined;
+    const differenceCost = typeof difference === 'number' && typeof unitCost === 'number'
+      ? difference * unitCost
+      : undefined;
     const expiryDates = group.members.map((m) => m.expiryDate).filter(Boolean).sort();
-    return { ...group, theoreticalInventory, difference, expiryDate: expiryDates[0] || '' };
+    return { ...group, theoreticalInventory, difference, unitCost, differenceCost, expiryDate: expiryDates[0] || '' };
   });
 }
 

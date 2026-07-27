@@ -13,6 +13,7 @@ function row(overrides) {
     quantity: 10,
     expiryDate: '',
     theoreticalInventory: 10,
+    unitCost: 5,
     ...overrides,
   };
 }
@@ -84,4 +85,41 @@ test('a single ungrouped row passes through unchanged aside from added fields', 
 test('groupCounts preserves first-seen order of distinct groups', () => {
   const result = groupCounts([row({ itemCode: 'B' }), row({ itemCode: 'A' }), row({ itemCode: 'B' })]);
   assert.deepEqual(result.map((r) => r.itemCode), ['B', 'A']);
+});
+
+test('unitCost uses the last member with a defined numeric value', () => {
+  const [result] = groupCounts([
+    row({ unitCost: 10 }),
+    row({ unitCost: undefined }),
+    row({ unitCost: 25 }),
+  ]);
+  assert.equal(result.unitCost, 25);
+});
+
+test('differenceCost is difference times the resolved unitCost', () => {
+  const [result] = groupCounts([
+    row({ quantity: 100, theoreticalInventory: 150, unitCost: 4 }),
+    row({ quantity: 50, theoreticalInventory: 150, unitCost: 4 }),
+  ]);
+  assert.equal(result.quantity, 150);
+  assert.equal(result.difference, 0);
+  assert.equal(result.differenceCost, 0);
+});
+
+test('differenceCost reflects a non-zero difference correctly', () => {
+  const [result] = groupCounts([row({ quantity: 12, theoreticalInventory: 20, unitCost: 3 })]);
+  assert.equal(result.difference, -8);
+  assert.equal(result.differenceCost, -24);
+});
+
+test('differenceCost is undefined when unitCost is never defined, even with a valid difference', () => {
+  const [result] = groupCounts([row({ quantity: 5, theoreticalInventory: 5, unitCost: undefined })]);
+  assert.equal(result.difference, 0);
+  assert.equal(result.differenceCost, undefined);
+});
+
+test('differenceCost is undefined when theoreticalInventory is never defined, even with a valid unitCost', () => {
+  const [result] = groupCounts([row({ quantity: 5, theoreticalInventory: undefined, unitCost: 10 })]);
+  assert.equal(result.difference, undefined);
+  assert.equal(result.differenceCost, undefined);
 });

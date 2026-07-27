@@ -103,6 +103,23 @@ test('difference is quantity minus theoreticalInventory', () => {
   assert.equal(result.records[0].difference, -8);
 });
 
+test('unitCost defaults to 0 when missing or non-numeric, rather than rejecting', () => {
+  const result = validateCountsSubmission(validBody({
+    items: [{ itemCode: 'X', quantity: 5, theoreticalInventory: 5, unitCost: undefined }],
+  }));
+  assert.equal(result.error, undefined);
+  assert.equal(result.records[0].unitCost, 0);
+  assert.equal(result.records[0].differenceCost, 0);
+});
+
+test('differenceCost is difference times unitCost', () => {
+  const result = validateCountsSubmission(validBody({
+    items: [{ itemCode: 'X', quantity: 12, theoreticalInventory: 20, unitCost: 3 }],
+  }));
+  assert.equal(result.records[0].difference, -8);
+  assert.equal(result.records[0].differenceCost, -24);
+});
+
 // ---- date handling: the exact bug fixed earlier this session ----
 
 test('an explicit valid client date is used as-is, not the server clock', () => {

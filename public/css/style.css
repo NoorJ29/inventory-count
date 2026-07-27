@@ -301,10 +301,16 @@ table.counts-table th, table.counts-table td {
   border: 1px solid var(--border); padding: 8px 10px; text-align: left;
 }
 table.counts-table th { background: var(--bg); position: sticky; top: 0; font-weight: 700; }
-/* System Inventory (9th column) only holds short numbers, but its long
+/* System Inventory (10th column) only holds short numbers, but its long
    header name made auto-layout stretch it much wider than it needs. */
-table.counts-table th:nth-child(9), table.counts-table td:nth-child(9) {
+table.counts-table th:nth-child(10), table.counts-table td:nth-child(10) {
   width: 90px;
+}
+/* Unit Cost (7th) and Difference Cost (12th) are also short numeric values
+   with disproportionately long headers — same narrowing treatment. */
+table.counts-table th:nth-child(7), table.counts-table td:nth-child(7),
+table.counts-table th:nth-child(12), table.counts-table td:nth-child(12) {
+  width: 100px;
 }
 /* Name and Location only ever hold a short word or two, but auto-layout
    was stretching them well past what their content needs. Pinning them

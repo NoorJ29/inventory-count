@@ -58,6 +58,8 @@ async function appendCounts(kv, records) {
     expiryDate: r.expiryDate,
     theoreticalInventory: r.theoreticalInventory,
     difference: r.difference,
+    unitCost: r.unitCost,
+    differenceCost: r.differenceCost,
   }));
 
   const batchKey = `${BATCH_PREFIX}${Date.now()}-${crypto.randomUUID()}`;
