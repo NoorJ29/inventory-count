@@ -112,8 +112,8 @@
             <td>${escapeHtml(g.description)}${renderInfoIcon(g.members, idx)}</td>
             <td>${escapeHtml(g.uom)}</td>
             <td>${g.unitCost ?? ''}</td>
-            <td>${escapeHtml(formatDateDisplay(g.expiryDate))}</td>
             <td>${g.quantity}</td>
+            <td>${escapeHtml(formatDateDisplay(g.expiryDate))}</td>
             <td>${g.theoreticalInventory ?? ''}</td>
             <td>${formatDifference(g.difference)}</td>
             <td>${formatDifference(g.differenceCost)}</td>
@@ -245,13 +245,13 @@
         <td>${escapeHtml(formatDateDisplay(m.date))}</td>
         <td>${escapeHtml(formatPersonName(m.person))}</td>
         <td>${escapeHtml(m.location || '')}</td>
-        <td>${escapeHtml(formatDateDisplay(m.expiryDate))}</td>
         <td>${m.quantity}</td>
+        <td>${escapeHtml(formatDateDisplay(m.expiryDate))}</td>
       </tr>
     `).join('');
     popover.innerHTML = `
       <table class="popover-table">
-        <thead><tr><th>Date</th><th>Name</th><th>Location</th><th>Expiry</th><th>Qty</th></tr></thead>
+        <thead><tr><th>Date</th><th>Name</th><th>Location</th><th>Qty</th><th>Expiry</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     `;

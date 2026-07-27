@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { groupCounts } = require('../src/groupCounts');
+const { groupCounts, groupCountsForExport } = require('../src/groupCounts');
 
 function row(overrides) {
   return {
@@ -122,4 +122,45 @@ test('differenceCost is undefined when theoreticalInventory is never defined, ev
   const [result] = groupCounts([row({ quantity: 5, theoreticalInventory: undefined, unitCost: 10 })]);
   assert.equal(result.difference, undefined);
   assert.equal(result.differenceCost, undefined);
+});
+
+// ---- groupCountsForExport: the export's broader, person-agnostic grouping ----
+
+test('groupCountsForExport merges rows from different people at the same product/date/location', () => {
+  const [result] = groupCountsForExport([
+    row({ person: 'Romain', quantity: 10 }),
+    row({ person: 'Marie', quantity: 5 }),
+  ]);
+  assert.equal(result.quantity, 15);
+  assert.equal(result.members.length, 2);
+  assert.deepEqual(result.members.map((m) => m.person), ['Romain', 'Marie']);
+});
+
+test('groupCountsForExport still separates rows differing in product/date/location', () => {
+  const result = groupCountsForExport([row({ itemCode: 'A' }), row({ itemCode: 'B' })]);
+  assert.equal(result.length, 2);
+});
+
+test('groupCountsForExport ignores person entirely — even identical person values from a different key field split the group', () => {
+  const result = groupCountsForExport([row({ location: 'Chiller 1' }), row({ location: 'Chiller 2' })]);
+  assert.equal(result.length, 2);
+});
+
+test('groupCountsForExport resolves theoreticalInventory/unitCost/difference/differenceCost the same way as groupCounts', () => {
+  const [result] = groupCountsForExport([
+    row({ person: 'Romain', quantity: 100, theoreticalInventory: 150, unitCost: 4 }),
+    row({ person: 'Marie', quantity: 50, theoreticalInventory: 150, unitCost: 4 }),
+  ]);
+  assert.equal(result.quantity, 150);
+  assert.equal(result.difference, 0);
+  assert.equal(result.differenceCost, 0);
+});
+
+test('groupCountsForExport preserves members in chronological (submission) order for numbering', () => {
+  const [result] = groupCountsForExport([
+    row({ person: 'First', quantity: 1 }),
+    row({ person: 'Second', quantity: 2 }),
+    row({ person: 'Third', quantity: 3 }),
+  ]);
+  assert.deepEqual(result.members.map((m) => m.person), ['First', 'Second', 'Third']);
 });

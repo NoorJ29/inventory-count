@@ -1,23 +1,12 @@
-function groupKey(row) {
-  return JSON.stringify([
-    (row.person || '').trim().toLowerCase(),
-    row.date || '',
-    row.location || '',
-    row.itemCode || '',
-    row.description || '',
-    row.uom || '',
-  ]);
-}
-
-// Merges rows that match on person/date/location/itemCode/description/uom,
-// summing quantity and recalculating difference from that summed quantity —
-// a display/export-time transformation only; storage stays raw and ungrouped.
-function groupCounts(rows) {
+// Shared accumulation/resolution logic behind both grouping variants below —
+// the only thing that differs between them is which fields the key is built
+// from; the summing/last-value-wins/difference math is identical either way.
+function groupRows(rows, keyFn) {
   const groups = new Map();
   const order = [];
 
   for (const row of rows) {
-    const key = groupKey(row);
+    const key = keyFn(row);
     if (!groups.has(key)) {
       groups.set(key, { ...row, quantity: 0, members: [] });
       order.push(key);
@@ -54,4 +43,43 @@ function groupCounts(rows) {
   });
 }
 
-module.exports = { groupCounts };
+// Admin page's grouping — merges rows that match on person/date/location/
+// itemCode/description/uom, summing quantity and recalculating difference
+// from that summed quantity. A display/export-time transformation only;
+// storage stays raw and ungrouped.
+function groupKey(row) {
+  return JSON.stringify([
+    (row.person || '').trim().toLowerCase(),
+    row.date || '',
+    row.location || '',
+    row.itemCode || '',
+    row.description || '',
+    row.uom || '',
+  ]);
+}
+function groupCounts(rows) {
+  return groupRows(rows, groupKey);
+}
+
+// Excel export's own, broader grouping — merges on date/location/itemCode/
+// description/uom only, regardless of who did the counting. For a given
+// product at a given location on a given date there's only one System
+// Inventory value to compare against, so the export combines every
+// recount of it into one row (with each contributor broken out via
+// buildExportWorkbook's per-recount Name/Quantity/Expiry Date columns)
+// even when different people did the counting — unlike the admin page's
+// groupCounts above, which only merges same-person recounts.
+function groupKeyForExport(row) {
+  return JSON.stringify([
+    row.date || '',
+    row.location || '',
+    row.itemCode || '',
+    row.description || '',
+    row.uom || '',
+  ]);
+}
+function groupCountsForExport(rows) {
+  return groupRows(rows, groupKeyForExport);
+}
+
+module.exports = { groupCounts, groupCountsForExport };

@@ -4,9 +4,8 @@ const basicAuth = require('express-basic-auth');
 
 const db = require('./db/local');
 const { LOCATIONS } = require('./locations');
-const { groupCounts } = require('./groupCounts');
+const { groupCountsForExport } = require('./groupCounts');
 const { buildExportWorkbook } = require('./buildExportWorkbook');
-const { formatPersonName } = require('./formatPersonName');
 const { validateCountsSubmission } = require('./validateCountsSubmission');
 
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
@@ -85,35 +84,11 @@ apiRouter.post('/admin/counts/reset', adminAuth, async (req, res) => {
   }
 });
 
-// Converts a stored ISO date (YYYY-MM-DD) to DD/MM/YYYY for display in the
-// export — kept as a plain string rather than a native Excel date cell so it
-// doesn't get reformatted based on the opening machine's locale.
-function isoToDisplayDate(iso) {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
-  if (!m) return '';
-  const [, y, mo, d] = m;
-  return `${d}/${mo}/${y}`;
-}
-
 apiRouter.get('/admin/counts/export', adminAuth, async (req, res) => {
   try {
     const counts = await db.loadCounts();
-    const grouped = groupCounts(counts);
-    const rows = grouped.map((c) => ({
-      date: isoToDisplayDate(c.date),
-      name: formatPersonName(c.person),
-      location: c.location || '',
-      itemCode: c.itemCode,
-      description: c.description,
-      uom: c.uom,
-      unitCost: c.unitCost ?? '',
-      expiryDate: isoToDisplayDate(c.expiryDate),
-      quantity: c.quantity,
-      theoreticalInventory: c.theoreticalInventory ?? '',
-      difference: c.difference ?? '',
-      differenceCost: c.differenceCost ?? '',
-    }));
-    const buffer = await buildExportWorkbook(rows);
+    const grouped = groupCountsForExport(counts);
+    const buffer = await buildExportWorkbook(grouped);
 
     res.setHeader('Content-Disposition', `attachment; filename="inventory-count-${Date.now()}.xlsx"`);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');

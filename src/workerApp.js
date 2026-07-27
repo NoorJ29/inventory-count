@@ -1,21 +1,10 @@
 import { Hono } from 'hono';
 import adminHtml from '../views/admin.html';
 import { LOCATIONS } from './locations.js';
-import { groupCounts } from './groupCounts.js';
+import { groupCountsForExport } from './groupCounts.js';
 import { buildExportWorkbook } from './buildExportWorkbook.js';
-import { formatPersonName } from './formatPersonName.js';
 import { validateCountsSubmission } from './validateCountsSubmission.js';
 import * as db from './db/cloudflare.js';
-
-// Converts a stored ISO date (YYYY-MM-DD) to DD/MM/YYYY for display in the
-// export — kept as a plain string rather than a native Excel date cell so it
-// doesn't get reformatted based on the opening machine's locale.
-function isoToDisplayDate(iso) {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
-  if (!m) return '';
-  const [, y, mo, d] = m;
-  return `${d}/${mo}/${y}`;
-}
 
 // Hono's built-in basicAuth middleware expects static credentials at setup
 // time, but ours only exist per-request via c.env (Workers bindings/secrets
@@ -92,22 +81,8 @@ app.post('/api/admin/counts/reset', requireAdminAuth, async (c) => {
 app.get('/api/admin/counts/export', requireAdminAuth, async (c) => {
   try {
     const counts = await db.loadCounts(c.env.INVENTORY_KV);
-    const grouped = groupCounts(counts);
-    const rows = grouped.map((cnt) => ({
-      date: isoToDisplayDate(cnt.date),
-      name: formatPersonName(cnt.person),
-      location: cnt.location || '',
-      itemCode: cnt.itemCode,
-      description: cnt.description,
-      uom: cnt.uom,
-      unitCost: cnt.unitCost ?? '',
-      expiryDate: isoToDisplayDate(cnt.expiryDate),
-      quantity: cnt.quantity,
-      theoreticalInventory: cnt.theoreticalInventory ?? '',
-      difference: cnt.difference ?? '',
-      differenceCost: cnt.differenceCost ?? '',
-    }));
-    const buffer = await buildExportWorkbook(rows);
+    const grouped = groupCountsForExport(counts);
+    const buffer = await buildExportWorkbook(grouped);
 
     return c.body(buffer, 200, {
       'Content-Disposition': `attachment; filename="inventory-count-${Date.now()}.xlsx"`,
