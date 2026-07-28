@@ -133,4 +133,11 @@ app.get('/admin', requireAdminAuth, (c) => c.html(adminHtml));
 
 export default {
   fetch: app.fetch,
+  // Runs daily (see wrangler.toml's [triggers]) to keep the number of KV
+  // keys loadCounts/resetCounts ever have to read in one request bounded,
+  // regardless of how long it's been since anyone last hit Export & Reset —
+  // see consolidateBatches in src/db/cloudflare.js for the full reasoning.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(db.consolidateBatches(env.INVENTORY_KV));
+  },
 };

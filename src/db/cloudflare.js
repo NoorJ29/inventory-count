@@ -3,6 +3,15 @@ const { parseItemsFromBuffer } = require('../itemsParser');
 const ITEMS_KEY = 'items';
 const ITEMS_META_KEY = 'items-meta';
 const BATCH_PREFIX = 'batch-';
+// Consolidated keys produced by consolidateBatches() below — same shape as a
+// batch- key (a JSON array of records), just merged from many small ones.
+const ARCHIVE_PREFIX = 'archive-';
+// Cloudflare's free plan caps a single request at 1,000 calls to its own
+// services (KV included) — this is a hard total per request, not a
+// concurrency limit. Capped well under that so a single consolidation run
+// can never risk hitting it itself, even if it's badly overdue; any excess
+// is simply left for the next scheduled run to pick up.
+const CONSOLIDATE_CHUNK_SIZE = 500;
 
 // Workers KV bindings are delivered per-request via the Worker's `env`, not a
 // global like process.env — every function here takes the KV namespace as an
@@ -67,11 +76,11 @@ async function appendCounts(kv, records) {
   return added;
 }
 
-async function listBatchKeys(kv) {
+async function listKeysWithPrefix(kv, prefix) {
   const keys = [];
   let cursor;
   for (;;) {
-    const page = await kv.list({ prefix: BATCH_PREFIX, cursor });
+    const page = await kv.list({ prefix, cursor });
     keys.push(...page.keys.map((k) => k.name));
     if (page.list_complete) break;
     cursor = page.cursor;
@@ -80,7 +89,10 @@ async function listBatchKeys(kv) {
 }
 
 async function loadCounts(kv) {
-  const keys = await listBatchKeys(kv);
+  const keys = [
+    ...(await listKeysWithPrefix(kv, BATCH_PREFIX)),
+    ...(await listKeysWithPrefix(kv, ARCHIVE_PREFIX)),
+  ];
   const batches = await Promise.all(keys.map((key) => kv.get(key, { type: 'json' })));
   const rows = batches.flat().filter(Boolean);
   rows.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
@@ -88,7 +100,28 @@ async function loadCounts(kv) {
 }
 
 async function resetCounts(kv) {
-  const keys = await listBatchKeys(kv);
+  const keys = [
+    ...(await listKeysWithPrefix(kv, BATCH_PREFIX)),
+    ...(await listKeysWithPrefix(kv, ARCHIVE_PREFIX)),
+  ];
+  await Promise.all(keys.map((key) => kv.delete(key)));
+}
+
+// Runs on a daily Cron Trigger (see wrangler.toml), completely outside any
+// request a user waits on. Merges a batch of small batch- keys into one
+// larger archive- key so loadCounts/resetCounts never have to read more
+// keys in one request than Cloudflare's free-plan cap allows, no matter how
+// long it's been since anyone last hit Export & Reset. The merged copy is
+// written and confirmed *before* the originals are deleted, so a failure
+// partway through can never lose data — at worst some keys are left
+// unconsolidated for the next scheduled run to pick up.
+async function consolidateBatches(kv) {
+  const keys = (await listKeysWithPrefix(kv, BATCH_PREFIX)).slice(0, CONSOLIDATE_CHUNK_SIZE);
+  if (keys.length === 0) return;
+  const batches = await Promise.all(keys.map((key) => kv.get(key, { type: 'json' })));
+  const rows = batches.flat().filter(Boolean);
+  const archiveKey = `${ARCHIVE_PREFIX}${Date.now()}-${crypto.randomUUID()}`;
+  await kv.put(archiveKey, JSON.stringify(rows));
   await Promise.all(keys.map((key) => kv.delete(key)));
 }
 
@@ -100,4 +133,5 @@ module.exports = {
   loadCounts,
   appendCounts,
   resetCounts,
+  consolidateBatches,
 };

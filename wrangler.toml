@@ -15,3 +15,9 @@ globs = ["**/*.html"]
 [[kv_namespaces]]
 binding = "INVENTORY_KV"
 id = "7d4b89c2d96f46fa88818de5a04d766d"
+
+# Runs consolidateBatches (src/db/cloudflare.js) once a day, purely as
+# internal storage housekeeping — see the scheduled() handler in
+# src/workerApp.js for what it does and why.
+[triggers]
+crons = ["0 0 * * *"]
