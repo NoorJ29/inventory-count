@@ -35,8 +35,11 @@ function groupRows(rows, keyFn) {
     const difference = typeof theoreticalInventory === 'number'
       ? group.quantity - theoreticalInventory
       : undefined;
+    // The `|| 0` guards against -0 (e.g. a zero unitCost times a negative
+    // difference produces -0 in JS) — mathematically equal to 0, but some
+    // display paths (Number.prototype.toLocaleString) render it as "-0".
     const differenceCost = typeof difference === 'number' && typeof unitCost === 'number'
-      ? difference * unitCost
+      ? (difference * unitCost) || 0
       : undefined;
     const expiryDates = group.members.map((m) => m.expiryDate).filter(Boolean).sort();
     return { ...group, theoreticalInventory, difference, unitCost, differenceCost, expiryDate: expiryDates[0] || '' };

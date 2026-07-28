@@ -124,6 +124,13 @@ test('differenceCost is undefined when theoreticalInventory is never defined, ev
   assert.equal(result.differenceCost, undefined);
 });
 
+test('differenceCost is a true 0, not -0, when unitCost is 0 and the difference is negative', () => {
+  const [result] = groupCounts([row({ quantity: 5, theoreticalInventory: 20, unitCost: 0 })]);
+  assert.equal(result.difference, -15);
+  assert.equal(result.differenceCost, 0);
+  assert.equal(Object.is(result.differenceCost, -0), false);
+});
+
 // ---- groupCountsForExport: the export's broader, person-agnostic grouping ----
 
 test('groupCountsForExport merges rows from different people at the same product/date/location', () => {

@@ -13,13 +13,22 @@
     return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
 
-  // Used for both the submission Date and the Expiry Date columns, so the
-  // two read consistently instead of one being ISO and the other DD/MM/YYYY.
+  // Used for the submission Date column only — Expiry Date uses
+  // formatExpiryDisplay below (2-digit year) instead.
   function formatDateDisplay(iso) {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
     if (!m) return '';
     const [, y, mo, d] = m;
     return `${d}/${mo}/${y}`;
+  }
+
+  // Same as formatDateDisplay but with a 2-digit year (DD/MM/YY) — used only
+  // for Expiry Date, never the submission Date column.
+  function formatExpiryDisplay(iso) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
+    if (!m) return '';
+    const [, y, mo, d] = m;
+    return `${d}/${mo}/${y.slice(-2)}`;
   }
 
   // Keep in sync with src/formatPersonName.js — standardizes a free-text
@@ -29,11 +38,31 @@
     return String(name || '').trim().toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
   }
 
+  // Rounds to a whole number and adds thousands separators — used for Unit
+  // Cost/Difference Cost only. The underlying value stays full-precision;
+  // this only affects what's rendered.
+  function formatMoney(value) {
+    if (value === undefined || value === null || value === '') return '';
+    // `|| 0` guards against -0 (toLocaleString renders it as "-0" otherwise).
+    const rounded = Math.round(value) || 0;
+    return rounded.toLocaleString('en-US');
+  }
+
   function formatDifference(diff) {
     if (diff === undefined || diff === null || diff === '') return '';
     if (diff > 0) return `<span class="diff-positive">+${diff}</span>`;
     if (diff < 0) return `<span class="diff-negative">${diff}</span>`;
     return `<span class="diff-zero">${diff}</span>`;
+  }
+
+  // Same +/color-coding shape as formatDifference, but the number text goes
+  // through formatMoney (no decimals, comma-grouped) since this is currency.
+  function formatDifferenceCost(value) {
+    if (value === undefined || value === null || value === '') return '';
+    const formatted = formatMoney(value);
+    if (value > 0) return `<span class="diff-positive">+${formatted}</span>`;
+    if (value < 0) return `<span class="diff-negative">${formatted}</span>`;
+    return `<span class="diff-zero">${formatted}</span>`;
   }
 
   // Keep in sync with src/groupCounts.js — no bundler exists to share this
@@ -74,8 +103,11 @@
       const difference = typeof theoreticalInventory === 'number'
         ? group.quantity - theoreticalInventory
         : undefined;
+      // The `|| 0` guards against -0 (e.g. a zero unitCost times a negative
+      // difference produces -0 in JS) — mathematically equal to 0, but
+      // toLocaleString (used by formatMoney) renders it as "-0" otherwise.
       const differenceCost = typeof difference === 'number' && typeof unitCost === 'number'
-        ? difference * unitCost
+        ? (difference * unitCost) || 0
         : undefined;
       const expiryDates = group.members.map((m) => m.expiryDate).filter(Boolean).sort();
       return { ...group, theoreticalInventory, difference, unitCost, differenceCost, expiryDate: expiryDates[0] || '' };
@@ -111,12 +143,12 @@
             <td>${escapeHtml(g.itemCode)}</td>
             <td>${escapeHtml(g.description)}${renderInfoIcon(g.members, idx)}</td>
             <td>${escapeHtml(g.uom)}</td>
-            <td>${g.unitCost ?? ''}</td>
+            <td>${formatMoney(g.unitCost)}</td>
             <td>${g.quantity}</td>
-            <td>${escapeHtml(formatDateDisplay(g.expiryDate))}</td>
+            <td>${escapeHtml(formatExpiryDisplay(g.expiryDate))}</td>
             <td>${g.theoreticalInventory ?? ''}</td>
             <td>${formatDifference(g.difference)}</td>
-            <td>${formatDifference(g.differenceCost)}</td>
+            <td>${formatDifferenceCost(g.differenceCost)}</td>
           </tr>
         `).join('');
         summaryBar.textContent = grouped.length !== rows.length
@@ -246,7 +278,7 @@
         <td>${escapeHtml(formatPersonName(m.person))}</td>
         <td>${escapeHtml(m.location || '')}</td>
         <td>${m.quantity}</td>
-        <td>${escapeHtml(formatDateDisplay(m.expiryDate))}</td>
+        <td>${escapeHtml(formatExpiryDisplay(m.expiryDate))}</td>
       </tr>
     `).join('');
     popover.innerHTML = `

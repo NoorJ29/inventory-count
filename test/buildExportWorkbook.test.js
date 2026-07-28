@@ -36,7 +36,7 @@ test('a single-member group produces Name 1/Quantity 1/Expiry Date 1 matching th
   const [row] = rows;
   assert.equal(row.name1, 'Romain');
   assert.equal(row.quantity1, 10);
-  assert.equal(row.expiryDate1, '25/12/2026');
+  assert.equal(row.expiryDate1, '25/12/26');
   assert.equal(row.total, 10);
 });
 
@@ -58,13 +58,13 @@ test('a 3-member group from 3 different people produces Name/Quantity/Expiry Dat
   const [row] = rows;
   assert.equal(row.name1, 'Romain');
   assert.equal(row.quantity1, 10);
-  assert.equal(row.expiryDate1, '25/12/2026');
+  assert.equal(row.expiryDate1, '25/12/26');
   assert.equal(row.name2, 'Marie');
   assert.equal(row.quantity2, 5);
   assert.equal(row.expiryDate2, '');
   assert.equal(row.name3, 'Jean-Pierre');
   assert.equal(row.quantity3, 3);
-  assert.equal(row.expiryDate3, '01/01/2027');
+  assert.equal(row.expiryDate3, '01/01/27');
   assert.equal(row.total, 18);
 });
 
@@ -92,11 +92,16 @@ test('mixed dataset: column set reflects the max member count, shorter groups ge
   assert.equal(shortRow.name3, undefined);
 });
 
-test('date formatting converts ISO to DD/MM/YYYY for both the group date and each member expiry date', () => {
-  const g = group({ date: '2026-01-05', members: [{ person: 'romain', quantity: 1, expiryDate: '2026-02-14' }] });
+test('the submission Date column uses a 4-digit year (DD/MM/YYYY), unchanged', () => {
+  const g = group({ date: '2026-01-05', members: [{ person: 'romain', quantity: 1, expiryDate: '' }] });
   const { rows } = buildExportColumnsAndRows([g]);
   assert.equal(rows[0].date, '05/01/2026');
-  assert.equal(rows[0].expiryDate1, '14/02/2026');
+});
+
+test('Expiry Date columns use a 2-digit year (DD/MM/YY)', () => {
+  const g = group({ date: '2026-01-05', members: [{ person: 'romain', quantity: 1, expiryDate: '2026-02-14' }] });
+  const { rows } = buildExportColumnsAndRows([g]);
+  assert.equal(rows[0].expiryDate1, '14/02/26');
 });
 
 test('a blank expiry date renders as an empty string, not "NaN/NaN/NaN" or similar', () => {
@@ -127,6 +132,15 @@ test('base columns no longer include a single unnumbered Name column', () => {
   const { columns } = buildExportColumnsAndRows([group()]);
   assert.ok(!columns.some((c) => c.header === 'Name'));
   assert.ok(!columns.some((c) => c.key === 'name'));
+});
+
+test('Unit Cost and Difference Cost columns carry a #,##0 Excel number format, other columns do not', () => {
+  const { columns } = buildExportColumnsAndRows([group()]);
+  const byHeader = Object.fromEntries(columns.map((c) => [c.header, c]));
+  assert.equal(byHeader['Unit Cost'].numFmt, '#,##0');
+  assert.equal(byHeader['Difference Cost'].numFmt, '#,##0');
+  assert.equal(byHeader['System Inventory'].numFmt, undefined);
+  assert.equal(byHeader['Difference'].numFmt, undefined);
 });
 
 test('Total, System Inventory, Difference, and Difference Cost columns appear once, at the end', () => {

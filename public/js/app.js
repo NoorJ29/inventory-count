@@ -54,8 +54,8 @@
   // all times, with typed digits filling its slots in order (like a card
   // expiry field) rather than a placeholder that disappears once you type.
   let expiryDigits = [];
-  const EXPIRY_MASK_TEMPLATE = ['D', 'D', '/', 'M', 'M', '/', 'Y', 'Y', 'Y', 'Y'];
-  const EXPIRY_SLOTS = [0, 1, 3, 4, 6, 7, 8, 9];
+  const EXPIRY_MASK_TEMPLATE = ['D', 'D', '/', 'M', 'M', '/', 'Y', 'Y'];
+  const EXPIRY_SLOTS = [0, 1, 3, 4, 6, 7];
 
   function loadLocations() {
     return fetch('/api/locations')
@@ -327,7 +327,7 @@
   }
 
   function nextExpiryCursorPos() {
-    return expiryDigits.length < 8 ? EXPIRY_SLOTS[expiryDigits.length] : 10;
+    return expiryDigits.length < 6 ? EXPIRY_SLOTS[expiryDigits.length] : 8;
   }
 
   function refreshExpiryDisplay() {
@@ -336,7 +336,7 @@
   }
 
   function setExpiryDigits(value) {
-    const raw = String(value || '').replace(/\D/g, '').slice(0, 8);
+    const raw = String(value || '').replace(/\D/g, '').slice(0, 6);
     expiryDigits = raw.split('');
     refreshExpiryDisplay();
   }
@@ -362,7 +362,7 @@
 
     if (/^[0-9]$/.test(e.key)) {
       e.preventDefault();
-      if (expiryDigits.length < 8) {
+      if (expiryDigits.length < 6) {
         expiryDigits.push(e.key);
         refreshExpiryDisplay();
         detExpiry.setSelectionRange(nextExpiryCursorPos(), nextExpiryCursorPos());
@@ -397,14 +397,15 @@
   });
 
   function parseDisplayDate(str) {
-    const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(str);
+    const m = /^(\d{2})\/(\d{2})\/(\d{2})$/.exec(str);
     if (!m) return null;
     const day = Number(m[1]);
     const month = Number(m[2]);
-    const year = Number(m[3]);
+    // A 2-digit year is always assumed to be 20XX — expiry dates for this
+    // business are always near-future, never 1900s, so no century ambiguity.
+    const year = 2000 + Number(m[3]);
     if (month < 1 || month > 12) return null;
     if (day < 1 || day > 31) return null;
-    if (year < 1900 || year > 2100) return null;
     return { day, month, year };
   }
 
@@ -433,7 +434,7 @@
     let expiryDateDisplay = '';
     if (expiryDigits.length > 0) {
       const currentExpiryValue = renderExpiryMask();
-      if (expiryDigits.length < 8 || !parseDisplayDate(currentExpiryValue)) {
+      if (expiryDigits.length < 6 || !parseDisplayDate(currentExpiryValue)) {
         itemModalError.textContent = 'Please enter a valid expiry date (DD/MM/YYYY) or leave it blank.';
         itemModalError.classList.remove('hidden');
         return;

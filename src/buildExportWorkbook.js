@@ -3,12 +3,22 @@ const { formatPersonName } = require('./formatPersonName');
 
 // Converts a stored ISO date (YYYY-MM-DD) to DD/MM/YYYY for display in the
 // export — kept as a plain string rather than a native Excel date cell so it
-// doesn't get reformatted based on the opening machine's locale.
+// doesn't get reformatted based on the opening machine's locale. Used for
+// the submission Date column only.
 function isoToDisplayDate(iso) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
   if (!m) return '';
   const [, y, mo, d] = m;
   return `${d}/${mo}/${y}`;
+}
+
+// Same as isoToDisplayDate but with a 2-digit year (DD/MM/YY) — used only
+// for Expiry Date columns, never the submission Date column.
+function isoToShortDisplayDate(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
+  if (!m) return '';
+  const [, y, mo, d] = m;
+  return `${d}/${mo}/${y.slice(-2)}`;
 }
 
 // Builds the dynamic column list and row data for the export. Pure/testable
@@ -27,7 +37,7 @@ function buildExportColumnsAndRows(groupedRows) {
     { header: 'Item Code', key: 'itemCode' },
     { header: 'Description', key: 'description' },
     { header: 'UOM', key: 'uom' },
-    { header: 'Unit Cost', key: 'unitCost' },
+    { header: 'Unit Cost', key: 'unitCost', numFmt: '#,##0' },
   ];
   for (let i = 1; i <= maxMembers; i++) {
     columns.push({ header: `Name ${i}`, key: `name${i}` });
@@ -38,7 +48,7 @@ function buildExportColumnsAndRows(groupedRows) {
     { header: 'Total', key: 'total' },
     { header: 'System Inventory', key: 'theoreticalInventory' },
     { header: 'Difference', key: 'difference' },
-    { header: 'Difference Cost', key: 'differenceCost' },
+    { header: 'Difference Cost', key: 'differenceCost', numFmt: '#,##0' },
   );
 
   const rows = groupedRows.map((g) => {
@@ -57,7 +67,7 @@ function buildExportColumnsAndRows(groupedRows) {
     g.members.forEach((m, idx) => {
       row[`name${idx + 1}`] = formatPersonName(m.person);
       row[`quantity${idx + 1}`] = m.quantity;
-      row[`expiryDate${idx + 1}`] = isoToDisplayDate(m.expiryDate);
+      row[`expiryDate${idx + 1}`] = isoToShortDisplayDate(m.expiryDate);
     });
     return row;
   });
@@ -91,6 +101,12 @@ async function buildExportWorkbook(groupedRows) {
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet('Inventory Count');
   sheet.columns = columns.map((col) => ({ ...col, width: computeWidth(col.header, rows, col.key) }));
+  // worksheet.columns = [...] only picks up header/key/width — numFmt has to
+  // be set directly on the resulting Column object afterward, or it's
+  // silently ignored (confirmed directly against exceljs's actual behavior).
+  for (const col of columns) {
+    if (col.numFmt) sheet.getColumn(col.key).numFmt = col.numFmt;
+  }
   sheet.addRows(rows);
   sheet.getRow(1).font = { bold: true };
   return workbook.xlsx.writeBuffer();
