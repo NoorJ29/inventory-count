@@ -353,8 +353,16 @@ table.counts-table th {
    styling .column-filter-btn uses everywhere else it appears. */
 table.counts-table th .column-filter-btn { color: rgba(255, 255, 255, 0.75); }
 table.counts-table th .column-filter-btn:hover { background: rgba(255, 255, 255, 0.18); color: #fff; }
-table.counts-table th .column-filter-btn.active { color: #fff; background: rgba(255, 255, 255, 0.25); }
-table.counts-table th .column-filter-btn.active:hover { color: #fff; }
+/* Fixed amber regardless of theme (rather than a token that shifts between
+   light/dark) so it reliably pops against the indigo header either way —
+   plus a white ring so it reads as a badge, not just a tinted icon. */
+table.counts-table th .column-filter-btn.active {
+  color: #1f2430;
+  background: #fbbf24;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.7);
+}
+table.counts-table th .column-filter-btn.active svg { fill: currentColor; }
+table.counts-table th .column-filter-btn.active:hover { background: #f59e0b; color: #1f2430; }
 /* Zebra striping plus a hover tint — with 12 columns and potentially
    hundreds of rows, both make it much easier to track a row across the
    table than an all-white/all-dark grid. */
