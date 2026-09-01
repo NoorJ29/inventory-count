@@ -84,6 +84,20 @@ apiRouter.post('/admin/counts/reset', adminAuth, async (req, res) => {
   }
 });
 
+apiRouter.post('/admin/counts/delete', adminAuth, async (req, res) => {
+  const { ids } = req.body || {};
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: 'No ids provided' });
+  }
+  try {
+    const deleted = await db.deleteCounts(ids);
+    res.json({ ok: true, deleted });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete counts' });
+  }
+});
+
 apiRouter.get('/admin/counts/export', adminAuth, async (req, res) => {
   try {
     const counts = await db.loadCounts();

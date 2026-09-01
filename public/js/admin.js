@@ -8,6 +8,8 @@
   const uploadStatus = document.getElementById('uploadStatus');
   const itemMetaNotice = document.getElementById('itemMetaNotice');
   const btnClearItems = document.getElementById('btnClearItems');
+  const btnEditMode = document.getElementById('btnEditMode');
+  const countsTable = document.querySelector('table.counts-table');
 
   // ---- Toolbar dropdowns (Export/Clear, Item List) ----
   // Generic toggle: each [data-dropdown-toggle] button opens the menu whose
@@ -218,11 +220,13 @@
     return result;
   }
 
+  const TRASH_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
+
   function renderTable() {
     const visible = applyFiltersAndSort(lastGroups);
     lastRenderedGroups = visible;
     countsBody.innerHTML = visible.map((g, idx) => `
-      <tr>${COLUMNS.map((col) => `<td>${cellHtml(col, g, idx)}</td>`).join('')}</tr>
+      <tr>${COLUMNS.map((col) => `<td>${cellHtml(col, g, idx)}</td>`).join('')}<td class="actions-col"><button type="button" class="icon-btn delete-row-btn" data-idx="${idx}" aria-label="Delete">${TRASH_ICON_SVG}</button></td></tr>
     `).join('');
     summaryBar.textContent = Object.keys(activeFilters).length > 0
       ? `${visible.length} of ${lastGroups.length} row(s) shown (filtered).`
@@ -294,6 +298,14 @@
   });
 
   btnRefresh.addEventListener('click', loadCounts);
+
+  let editMode = false;
+  btnEditMode.addEventListener('click', () => {
+    editMode = !editMode;
+    countsTable.classList.toggle('edit-mode-active', editMode);
+    btnEditMode.classList.toggle('btn-toggle-active', editMode);
+    btnEditMode.textContent = editMode ? 'Exit Edit Mode' : 'Edit Mode';
+  });
 
   btnClearItems.addEventListener('click', async () => {
     if (!(await showConfirm('This removes the item list from the system. No one will be able to look up or scan items until a new list is uploaded. Continue?', { confirmText: 'Continue', danger: true }))) return;
@@ -611,6 +623,147 @@
       btn.classList.toggle('active', Boolean(activeFilters[btn.dataset.column]));
     });
   }
+
+  // ---- Row delete (Edit Mode) ----
+  // For a merged row (2+ underlying counts), shows a checklist of which
+  // specific ones to delete before confirming — everything else in the app
+  // just fires showConfirm directly. Reuses .column-filter-popup's box
+  // styling (border/shadow/width/padding) via its own class alongside a
+  // second class used only for this popup's own open/close/outside-click
+  // logic, kept independent of the real column-filter popup's state.
+  const deleteSelectPopup = document.createElement('div');
+  deleteSelectPopup.className = 'column-filter-popup delete-select-popup';
+  document.body.appendChild(deleteSelectPopup);
+
+  let currentDeleteMembers = null;
+  let currentDeleteSelected = null;
+  let deleteSelectResolve = null;
+
+  function updateDeleteSelectAllAndOkState() {
+    const selectAll = deleteSelectPopup.querySelector('[data-role="select-all"]');
+    const okBtn = deleteSelectPopup.querySelector('[data-action="ok"]');
+    if (selectAll) selectAll.checked = currentDeleteSelected.size === currentDeleteMembers.length;
+    if (okBtn) okBtn.disabled = currentDeleteSelected.size === 0;
+  }
+
+  function renderDeleteSelectPopup(members) {
+    const rowsHtml = members.map((m) => `
+      <label data-id="${escapeHtml(String(m.id))}">
+        <input type="checkbox" checked />
+        <span>${escapeHtml(formatDateDisplay(m.date))} — ${escapeHtml(formatPersonName(m.person))} — Qty ${m.quantity}</span>
+      </label>
+    `).join('');
+    deleteSelectPopup.innerHTML = `
+      <div class="delete-select-heading">Select counts to delete</div>
+      <label class="column-filter-select-all">
+        <input type="checkbox" data-role="select-all" checked />
+        <span>(Select All)</span>
+      </label>
+      <div class="column-filter-values">${rowsHtml}</div>
+      <div class="column-filter-actions">
+        <button type="button" class="btn btn-danger" data-action="ok">Delete Selected</button>
+        <button type="button" class="btn btn-secondary" data-action="cancel">Cancel</button>
+      </div>
+    `;
+  }
+
+  // Resolves with the array of selected member ids once "Delete Selected" is
+  // clicked, or null if dismissed any other way (Cancel, outside click, Escape).
+  function openMemberSelectionPopup(members, anchorEl) {
+    return new Promise((resolve) => {
+      deleteSelectResolve = resolve;
+      currentDeleteMembers = members;
+      currentDeleteSelected = new Set(members.map((m) => m.id));
+      renderDeleteSelectPopup(members);
+
+      const r = anchorEl.getBoundingClientRect();
+      deleteSelectPopup.classList.add('open');
+      let left = Math.min(r.left, window.innerWidth - deleteSelectPopup.offsetWidth - 8);
+      left = Math.max(8, left);
+      let top = r.bottom + 6;
+      if (top + deleteSelectPopup.offsetHeight > window.innerHeight - 8) top = r.top - deleteSelectPopup.offsetHeight - 6;
+      deleteSelectPopup.style.left = `${left}px`;
+      deleteSelectPopup.style.top = `${Math.max(8, top)}px`;
+    });
+  }
+
+  function closeDeleteSelectPopup(result) {
+    deleteSelectPopup.classList.remove('open');
+    currentDeleteMembers = null;
+    currentDeleteSelected = null;
+    if (deleteSelectResolve) {
+      const resolve = deleteSelectResolve;
+      deleteSelectResolve = null;
+      resolve(result);
+    }
+  }
+
+  deleteSelectPopup.addEventListener('click', (e) => {
+    const actionBtn = e.target.closest('[data-action]');
+    if (!actionBtn) return;
+    if (actionBtn.dataset.action === 'ok') {
+      if (currentDeleteSelected.size === 0) return;
+      closeDeleteSelectPopup([...currentDeleteSelected]);
+    } else if (actionBtn.dataset.action === 'cancel') {
+      closeDeleteSelectPopup(null);
+    }
+  });
+  deleteSelectPopup.addEventListener('change', (e) => {
+    if (e.target.matches('.column-filter-values input[type="checkbox"]')) {
+      const label = e.target.closest('label');
+      const member = currentDeleteMembers.find((m) => String(m.id) === label.dataset.id);
+      if (!member) return;
+      if (e.target.checked) currentDeleteSelected.add(member.id);
+      else currentDeleteSelected.delete(member.id);
+      updateDeleteSelectAllAndOkState();
+    } else if (e.target.matches('[data-role="select-all"]')) {
+      if (e.target.checked) currentDeleteMembers.forEach((m) => currentDeleteSelected.add(m.id));
+      else currentDeleteSelected.clear();
+      deleteSelectPopup.querySelectorAll('.column-filter-values input[type="checkbox"]').forEach((cb) => { cb.checked = e.target.checked; });
+      updateDeleteSelectAllAndOkState();
+    }
+  });
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.delete-select-popup')) closeDeleteSelectPopup(null);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeDeleteSelectPopup(null);
+  });
+
+  countsBody.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.delete-row-btn');
+    if (!btn) return;
+    e.stopPropagation();
+    const group = lastRenderedGroups[Number(btn.dataset.idx)];
+    if (!group) return;
+
+    let idsToDelete;
+    if (group.members.length > 1) {
+      idsToDelete = await openMemberSelectionPopup(group.members, btn);
+      if (!idsToDelete || idsToDelete.length === 0) return; // cancelled, or nothing selected
+    } else {
+      idsToDelete = group.members.map((m) => m.id);
+    }
+
+    const confirmed = await showConfirm(
+      `Delete ${idsToDelete.length} count${idsToDelete.length > 1 ? 's' : ''}? This cannot be undone.`,
+      { confirmText: 'Delete', danger: true }
+    );
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch('/api/admin/counts/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: idsToDelete }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Delete failed');
+      loadCounts();
+    } catch (err) {
+      showAlert(err.message);
+    }
+  });
 
   loadCounts();
   loadItemMeta();

@@ -107,6 +107,32 @@ async function resetCounts(kv) {
   await Promise.all(keys.map((key) => kv.delete(key)));
 }
 
+// Removes specific count records by id (used by the admin page's Edit Mode
+// row-delete, as opposed to resetCounts which wipes everything). Since
+// records live inside multi-record batch-/archive- keys rather than one key
+// per record, this has to find whichever key(s) hold the targeted ids,
+// rewrite each affected key with those records filtered out (or delete the
+// key entirely if that empties it), and leave every other key untouched.
+// Returns how many records were actually removed.
+async function deleteCounts(kv, ids) {
+  const idSet = new Set(ids);
+  const keys = [
+    ...(await listKeysWithPrefix(kv, BATCH_PREFIX)),
+    ...(await listKeysWithPrefix(kv, ARCHIVE_PREFIX)),
+  ];
+  let deletedCount = 0;
+  for (const key of keys) {
+    const records = await kv.get(key, { type: 'json' });
+    if (!records) continue;
+    const remaining = records.filter((r) => !idSet.has(r.id));
+    if (remaining.length === records.length) continue; // nothing in this key matched
+    deletedCount += records.length - remaining.length;
+    if (remaining.length === 0) await kv.delete(key);
+    else await kv.put(key, JSON.stringify(remaining));
+  }
+  return deletedCount;
+}
+
 // Runs on a daily Cron Trigger (see wrangler.toml), completely outside any
 // request a user waits on. Merges a batch of small batch- keys into one
 // larger archive- key so loadCounts/resetCounts never have to read more
@@ -133,5 +159,6 @@ module.exports = {
   loadCounts,
   appendCounts,
   resetCounts,
+  deleteCounts,
   consolidateBatches,
 };

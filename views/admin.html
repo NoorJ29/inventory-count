@@ -33,6 +33,7 @@
     </div>
 
     <button id="btnRefresh" class="btn btn-secondary">Refresh</button>
+    <button id="btnEditMode" type="button" class="btn btn-secondary">Edit Mode</button>
   </div>
 
   <div id="uploadStatus" class="error hidden"></div>
@@ -57,6 +58,7 @@
           <th><div class="th-inner"><span class="th-label">System Inventory</span><button type="button" class="column-filter-btn" data-column="theoreticalInventory" aria-label="Sort and filter System Inventory"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></button></div></th>
           <th><div class="th-inner"><span class="th-label">Difference</span><button type="button" class="column-filter-btn" data-column="difference" aria-label="Sort and filter Difference"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></button></div></th>
           <th><div class="th-inner"><span class="th-label">Difference Cost</span><button type="button" class="column-filter-btn" data-column="differenceCost" aria-label="Sort and filter Difference Cost"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></button></div></th>
+          <th class="actions-col"><span class="th-label">Actions</span></th>
         </tr>
       </thead>
       <tbody id="countsBody"></tbody>

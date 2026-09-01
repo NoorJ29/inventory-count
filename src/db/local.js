@@ -111,6 +111,19 @@ async function resetCounts() {
   });
 }
 
+// Removes specific count records by id (used by the admin page's Edit Mode
+// row-delete, as opposed to resetCounts which wipes everything). Returns how
+// many records were actually removed.
+async function deleteCounts(ids) {
+  const idSet = new Set(ids);
+  return queueWrite(() => {
+    const counts = JSON.parse(fs.readFileSync(COUNTS_JSON, 'utf8'));
+    const remaining = counts.filter((c) => !idSet.has(c.id));
+    fs.writeFileSync(COUNTS_JSON, JSON.stringify(remaining, null, 2));
+    return counts.length - remaining.length;
+  });
+}
+
 module.exports = {
   findItemByCode,
   replaceItems,
@@ -119,4 +132,5 @@ module.exports = {
   loadCounts,
   appendCounts,
   resetCounts,
+  deleteCounts,
 };

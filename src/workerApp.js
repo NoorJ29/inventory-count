@@ -78,6 +78,20 @@ app.post('/api/admin/counts/reset', requireAdminAuth, async (c) => {
   }
 });
 
+app.post('/api/admin/counts/delete', requireAdminAuth, async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const { ids } = body || {};
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return c.json({ error: 'No ids provided' }, 400);
+  }
+  try {
+    const deleted = await db.deleteCounts(c.env.INVENTORY_KV, ids);
+    return c.json({ ok: true, deleted });
+  } catch (err) {
+    return c.json({ error: 'Failed to delete counts' }, 500);
+  }
+});
+
 app.get('/api/admin/counts/export', requireAdminAuth, async (c) => {
   try {
     const counts = await db.loadCounts(c.env.INVENTORY_KV);

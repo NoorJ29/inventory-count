@@ -472,6 +472,17 @@ table.counts-table th:nth-child(3), table.counts-table td:nth-child(3) {
 }
 .column-filter-actions .btn { padding: 7px 10px; font-size: 0.85rem; }
 
+/* Actions column (row delete, Edit Mode) is hidden until Edit Mode is on —
+   hiding the same trailing column consistently across the header and every
+   row keeps the rest of the table's column alignment unaffected. */
+table.counts-table .actions-col { display: none; text-align: center; }
+table.counts-table.edit-mode-active .actions-col { display: table-cell; }
+.btn-toggle-active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+.delete-row-btn { color: var(--text-muted); }
+.delete-row-btn:hover { background: var(--color-danger-light); color: var(--color-danger); }
+.delete-row-btn svg { width: 16px; height: 16px; }
+.delete-select-heading { padding: 8px 12px 4px; font-weight: 700; }
+
 .info-icon {
   display: inline-flex; vertical-align: middle;
   margin-left: 6px;
