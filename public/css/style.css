@@ -332,13 +332,35 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus {
 .dropdown-item--danger:hover { background: var(--color-danger-light); }
 table.counts-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
 table.counts-table th, table.counts-table td {
-  border: 1px solid var(--border); padding: 8px 10px; text-align: left;
+  padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border);
 }
-table.counts-table th { background: var(--bg); position: sticky; top: 0; font-weight: 700; }
+/* Bold color band instead of a plain neutral header — matches the
+   toolbar's own primary-color buttons instead of blending into the page. */
+table.counts-table th {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  color: #fff;
+  position: sticky; top: 0;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: 0 2px 6px rgba(16, 24, 40, 0.15);
+}
 /* Flex lives on this inner wrapper, not the <th> itself — a <th> with
    display: flex stops participating in the table's column-layout
    algorithm entirely, breaking column-width alignment with <td>s below. */
 .th-inner { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+/* The filter icon needs its own light-on-color treatment now that the
+   header itself is a solid color band, rather than the muted-on-neutral
+   styling .column-filter-btn uses everywhere else it appears. */
+table.counts-table th .column-filter-btn { color: rgba(255, 255, 255, 0.75); }
+table.counts-table th .column-filter-btn:hover { background: rgba(255, 255, 255, 0.18); color: #fff; }
+table.counts-table th .column-filter-btn.active { color: #fff; background: rgba(255, 255, 255, 0.25); }
+table.counts-table th .column-filter-btn.active:hover { color: #fff; }
+/* Zebra striping plus a hover tint — with 12 columns and potentially
+   hundreds of rows, both make it much easier to track a row across the
+   table than an all-white/all-dark grid. */
+table.counts-table tbody tr:nth-child(even) { background: var(--bg); }
+table.counts-table tbody tr:nth-child(odd) { background: var(--surface); }
+table.counts-table tbody tr:hover td { background: var(--color-primary-light); }
 /* System Inventory (10th column) only holds short numbers, but its long
    header name made auto-layout stretch it much wider than it needs. */
 table.counts-table th:nth-child(10), table.counts-table td:nth-child(10) {
