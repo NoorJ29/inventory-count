@@ -7,13 +7,31 @@
   <h1>Physical Inventory Count - Admin</h1>
 
   <div class="admin-toolbar">
-    <button id="btnExport" class="btn btn-primary">Export to Excel</button>
-    <button id="btnReset" class="btn btn-danger">Export &amp; Reset</button>
-    <label class="btn btn-secondary" style="cursor:pointer;">
-      Upload Item List
-      <input id="fileUpload" type="file" accept=".xlsx" style="display:none;" />
-    </label>
-    <button id="btnClearItems" class="btn btn-danger">Remove Item List</button>
+    <div class="dropdown">
+      <button type="button" class="btn btn-primary dropdown-toggle" data-dropdown-toggle="exportMenu">
+        Export / Clear
+        <svg class="dropdown-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="dropdown-menu" id="exportMenu">
+        <button id="btnExport" class="dropdown-item">Export to Excel</button>
+        <button id="btnReset" class="dropdown-item dropdown-item--danger">Export &amp; Reset</button>
+      </div>
+    </div>
+
+    <div class="dropdown">
+      <button type="button" class="btn btn-secondary dropdown-toggle" data-dropdown-toggle="itemListMenu">
+        Item List
+        <svg class="dropdown-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="dropdown-menu" id="itemListMenu">
+        <label class="dropdown-item" style="cursor:pointer;">
+          Upload Item List
+          <input id="fileUpload" type="file" accept=".xlsx" style="display:none;" />
+        </label>
+        <button id="btnClearItems" class="dropdown-item dropdown-item--danger">Remove Item List</button>
+      </div>
+    </div>
+
     <button id="btnRefresh" class="btn btn-secondary">Refresh</button>
   </div>
 

@@ -296,6 +296,40 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus {
 .admin-wrap { max-width: 1700px; margin: 0 auto; padding: 20px 24px 60px; }
 .admin-toolbar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
 .admin-toolbar .btn { width: auto; padding: 10px 16px; }
+
+.dropdown { position: relative; }
+.dropdown-toggle { display: inline-flex; align-items: center; gap: 6px; }
+.dropdown-caret { width: 14px; height: 14px; flex-shrink: 0; }
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 190px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 30;
+  overflow: hidden;
+}
+.dropdown-menu.open { display: block; }
+.dropdown-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 14px;
+  border: none;
+  background: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  box-shadow: none;
+}
+.dropdown-item:hover { background: var(--bg); }
+.dropdown-item--danger { color: var(--color-danger); }
+.dropdown-item--danger:hover { background: var(--color-danger-light); }
 table.counts-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
 table.counts-table th, table.counts-table td {
   border: 1px solid var(--border); padding: 8px 10px; text-align: left;

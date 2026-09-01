@@ -9,6 +9,29 @@
   const itemMetaNotice = document.getElementById('itemMetaNotice');
   const btnClearItems = document.getElementById('btnClearItems');
 
+  // ---- Toolbar dropdowns (Export/Clear, Item List) ----
+  // Generic toggle: each [data-dropdown-toggle] button opens the menu whose
+  // id matches its attribute value. Clicking an item inside a menu closes it
+  // (after the item's own click handler runs, e.g. triggering the file
+  // picker or starting the export), same as clicking anywhere outside or
+  // pressing Escape.
+  document.querySelectorAll('[data-dropdown-toggle]').forEach((toggle) => {
+    const menu = document.getElementById(toggle.dataset.dropdownToggle);
+    toggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = menu.classList.contains('open');
+      document.querySelectorAll('.dropdown-menu.open').forEach((m) => m.classList.remove('open'));
+      if (!isOpen) menu.classList.add('open');
+    });
+    menu.addEventListener('click', () => menu.classList.remove('open'));
+  });
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.dropdown-menu.open').forEach((m) => m.classList.remove('open'));
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') document.querySelectorAll('.dropdown-menu.open').forEach((m) => m.classList.remove('open'));
+  });
+
   function escapeHtml(str) {
     return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
