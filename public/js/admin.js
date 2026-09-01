@@ -150,33 +150,95 @@
     `;
   }
 
+  // ---- Column config driving both table rendering and the sort/filter
+  // popup below. `getRaw` is used for sorting/checklist-ordering (real
+  // numbers/ISO dates, not the formatted string); `getDisplay` is the
+  // formatted string used both as the cell's default text and as the
+  // filter checklist's label/value — keeping what's shown and what's
+  // matched always in sync. Cells needing extra markup (the merge info
+  // icon, the colored Difference/Difference Cost spans) are special-cased
+  // in cellHtml() below rather than here.
+  const COLUMNS = [
+    { key: 'date', header: 'Date', type: 'date', getRaw: (g) => g.date || '', getDisplay: (g) => formatDateDisplay(g.date) },
+    { key: 'person', header: 'Name', type: 'text', getRaw: (g) => formatPersonName(g.person), getDisplay: (g) => formatPersonName(g.person) },
+    { key: 'location', header: 'Location', type: 'text', getRaw: (g) => g.location || '', getDisplay: (g) => g.location || '' },
+    { key: 'itemCode', header: 'Item Code', type: 'text', getRaw: (g) => g.itemCode || '', getDisplay: (g) => g.itemCode || '' },
+    { key: 'description', header: 'Description', type: 'text', getRaw: (g) => g.description || '', getDisplay: (g) => g.description || '' },
+    { key: 'uom', header: 'UOM', type: 'text', getRaw: (g) => g.uom || '', getDisplay: (g) => g.uom || '' },
+    { key: 'unitCost', header: 'Unit Cost', type: 'number', getRaw: (g) => (typeof g.unitCost === 'number' ? g.unitCost : undefined), getDisplay: (g) => formatMoney(g.unitCost) },
+    { key: 'quantity', header: 'Quantity', type: 'number', getRaw: (g) => g.quantity, getDisplay: (g) => String(g.quantity ?? '') },
+    { key: 'expiryDate', header: 'Expiry Date', type: 'date', getRaw: (g) => g.expiryDate || '', getDisplay: (g) => formatExpiryDisplay(g.expiryDate) },
+    { key: 'theoreticalInventory', header: 'System Inventory', type: 'number', getRaw: (g) => (typeof g.theoreticalInventory === 'number' ? g.theoreticalInventory : undefined), getDisplay: (g) => (g.theoreticalInventory === undefined || g.theoreticalInventory === null ? '' : String(g.theoreticalInventory)) },
+    { key: 'difference', header: 'Difference', type: 'number', getRaw: (g) => (typeof g.difference === 'number' ? g.difference : undefined), getDisplay: (g) => (g.difference === undefined || g.difference === null ? '' : String(g.difference)) },
+    { key: 'differenceCost', header: 'Difference Cost', type: 'number', getRaw: (g) => (typeof g.differenceCost === 'number' ? g.differenceCost : undefined), getDisplay: (g) => (g.differenceCost === undefined || g.differenceCost === null ? '' : formatMoney(g.differenceCost)) },
+  ];
+
+  function cellHtml(col, g, idx) {
+    if (col.key === 'description') return `${escapeHtml(col.getDisplay(g))}${renderInfoIcon(g.members, idx)}`;
+    if (col.key === 'difference') return formatDifference(g.difference);
+    if (col.key === 'differenceCost') return formatDifferenceCost(g.differenceCost);
+    return escapeHtml(col.getDisplay(g));
+  }
+
   let lastGroups = [];
+  let lastRawCount = 0;
+  // lastRenderedGroups is what's actually on screen right now (after
+  // filtering/sorting) — the merge-breakdown popover below must index into
+  // THIS, not lastGroups, since a filtered/sorted row's on-screen position
+  // no longer matches its position in the full unfiltered dataset.
+  let lastRenderedGroups = [];
+  let activeFilters = {}; // { [columnKey]: Set<displayValue> } — a column present here is filtered.
+  let activeSort = null; // { key, direction: 'asc' | 'desc' } | null
+
+  function applyFiltersAndSort(groups) {
+    let result = groups.filter((g) =>
+      Object.keys(activeFilters).every((key) => {
+        const col = COLUMNS.find((c) => c.key === key);
+        return activeFilters[key].has(col.getDisplay(g));
+      })
+    );
+    if (activeSort) {
+      const col = COLUMNS.find((c) => c.key === activeSort.key);
+      const withValue = [];
+      const blanks = [];
+      for (const g of result) {
+        const raw = col.getRaw(g);
+        (raw === undefined || raw === null || raw === '' ? blanks : withValue).push(g);
+      }
+      withValue.sort((a, b) => {
+        const av = col.getRaw(a);
+        const bv = col.getRaw(b);
+        if (col.type === 'text') return String(av).localeCompare(String(bv), undefined, { sensitivity: 'base' });
+        return av < bv ? -1 : av > bv ? 1 : 0;
+      });
+      if (activeSort.direction === 'desc') withValue.reverse();
+      // Blanks always sort last regardless of direction, matching Excel.
+      result = [...withValue, ...blanks];
+    }
+    return result;
+  }
+
+  function renderTable() {
+    const visible = applyFiltersAndSort(lastGroups);
+    lastRenderedGroups = visible;
+    countsBody.innerHTML = visible.map((g, idx) => `
+      <tr>${COLUMNS.map((col) => `<td>${cellHtml(col, g, idx)}</td>`).join('')}</tr>
+    `).join('');
+    summaryBar.textContent = Object.keys(activeFilters).length > 0
+      ? `${visible.length} of ${lastGroups.length} row(s) shown (filtered).`
+      : (lastGroups.length !== lastRawCount
+        ? `${lastGroups.length} row(s) counted (from ${lastRawCount} entries).`
+        : `${lastGroups.length} row(s) counted.`);
+    updateColumnFilterIndicators();
+  }
 
   function loadCounts() {
     fetch('/api/admin/counts')
       .then((r) => r.json())
       .then((rows) => {
-        const grouped = groupCounts(rows);
-        lastGroups = grouped;
-        countsBody.innerHTML = grouped.map((g, idx) => `
-          <tr>
-            <td>${escapeHtml(formatDateDisplay(g.date))}</td>
-            <td>${escapeHtml(formatPersonName(g.person))}</td>
-            <td>${escapeHtml(g.location || '')}</td>
-            <td>${escapeHtml(g.itemCode)}</td>
-            <td>${escapeHtml(g.description)}${renderInfoIcon(g.members, idx)}</td>
-            <td>${escapeHtml(g.uom)}</td>
-            <td>${formatMoney(g.unitCost)}</td>
-            <td>${g.quantity}</td>
-            <td>${escapeHtml(formatExpiryDisplay(g.expiryDate))}</td>
-            <td>${g.theoreticalInventory ?? ''}</td>
-            <td>${formatDifference(g.difference)}</td>
-            <td>${formatDifferenceCost(g.differenceCost)}</td>
-          </tr>
-        `).join('');
-        summaryBar.textContent = grouped.length !== rows.length
-          ? `${grouped.length} row(s) counted (from ${rows.length} entries).`
-          : `${grouped.length} row(s) counted.`;
+        lastGroups = groupCounts(rows);
+        lastRawCount = rows.length;
+        renderTable();
       });
   }
 
@@ -314,7 +376,7 @@
 
   function openPopoverFor(icon) {
     const idx = Number(icon.dataset.idx);
-    const group = lastGroups[idx];
+    const group = lastRenderedGroups[idx];
     if (!group) return;
     renderPopoverContent(group.members);
 
@@ -365,6 +427,190 @@
   });
   window.addEventListener('scroll', closePopover, true);
   window.addEventListener('resize', closePopover);
+
+  // ---- Column header sort/filter popup (Excel-style AutoFilter) ----
+  // One shared floating element, same reasoning as .info-popover above:
+  // nesting this inside a <th> within .table-scroll would get clipped by
+  // that container's overflow-x: auto.
+  const columnFilterPopup = document.createElement('div');
+  columnFilterPopup.className = 'column-filter-popup';
+  document.body.appendChild(columnFilterPopup);
+
+  let currentFilterColumnKey = null;
+  let pendingSelected = null; // Set<displayValue> being edited until OK/Cancel
+
+  function sortLabels(type) {
+    if (type === 'number') return ['Sort Smallest to Largest', 'Sort Largest to Smallest'];
+    if (type === 'date') return ['Sort Oldest to Newest', 'Sort Newest to Oldest'];
+    return ['Sort A to Z', 'Sort Z to A'];
+  }
+
+  // Distinct display values for a column, plus whether any row is blank for
+  // it — ordered numerically/chronologically for number/date columns (via
+  // getRaw) rather than as plain strings, and alphabetically for text ones.
+  function uniqueValuesFor(col) {
+    const displayToRaw = new Map();
+    let hasBlank = false;
+    for (const g of lastGroups) {
+      const display = col.getDisplay(g);
+      if (display === '') { hasBlank = true; continue; }
+      if (!displayToRaw.has(display)) displayToRaw.set(display, col.getRaw(g));
+    }
+    const values = [...displayToRaw.keys()].sort((a, b) => {
+      if (col.type === 'text') return a.localeCompare(b, undefined, { sensitivity: 'base' });
+      const ra = displayToRaw.get(a);
+      const rb = displayToRaw.get(b);
+      return ra < rb ? -1 : ra > rb ? 1 : 0;
+    });
+    return { values, hasBlank };
+  }
+
+  function updateSelectAllState() {
+    const selectAll = columnFilterPopup.querySelector('[data-role="select-all"]');
+    if (!selectAll) return;
+    const visibleLabels = [...columnFilterPopup.querySelectorAll('.column-filter-values label')]
+      .filter((label) => label.style.display !== 'none');
+    const checkboxes = visibleLabels.map((label) => label.querySelector('input'));
+    selectAll.checked = checkboxes.length > 0 && checkboxes.every((cb) => cb.checked);
+  }
+
+  function renderColumnFilterPopup(col) {
+    const { values, hasBlank } = uniqueValuesFor(col);
+    const [ascLabel, descLabel] = sortLabels(col.type);
+    const active = activeFilters[col.key];
+    // Selection starts from whatever filter is already active, or
+    // "everything selected" (i.e. unfiltered) if there isn't one yet.
+    pendingSelected = active ? new Set(active) : new Set([...values, ...(hasBlank ? [''] : [])]);
+
+    const rowsHtml = [
+      ...values.map((v) => ({ value: v, label: v })),
+      ...(hasBlank ? [{ value: '', label: '(Blanks)' }] : []),
+    ].map(({ value, label }) => `
+      <label data-value="${escapeHtml(value)}">
+        <input type="checkbox" ${pendingSelected.has(value) ? 'checked' : ''} />
+        <span>${escapeHtml(label)}</span>
+      </label>
+    `).join('');
+
+    columnFilterPopup.innerHTML = `
+      <button type="button" class="dropdown-item" data-action="sort-asc">${ascLabel}</button>
+      <button type="button" class="dropdown-item" data-action="sort-desc">${descLabel}</button>
+      <hr />
+      <button type="button" class="dropdown-item" data-action="clear-filter" ${active ? '' : 'disabled'}>Clear Filter</button>
+      <hr />
+      <input type="text" class="column-filter-search" placeholder="Search" />
+      <label class="column-filter-select-all">
+        <input type="checkbox" data-role="select-all" />
+        <span>(Select All)</span>
+      </label>
+      <div class="column-filter-values">${rowsHtml}</div>
+      <div class="column-filter-actions">
+        <button type="button" class="btn btn-primary" data-action="ok">OK</button>
+        <button type="button" class="btn btn-secondary" data-action="cancel">Cancel</button>
+      </div>
+    `;
+    updateSelectAllState();
+  }
+
+  function openColumnFilterPopup(columnKey, iconEl) {
+    const col = COLUMNS.find((c) => c.key === columnKey);
+    if (!col) return;
+    currentFilterColumnKey = columnKey;
+    renderColumnFilterPopup(col);
+
+    const r = iconEl.getBoundingClientRect();
+    columnFilterPopup.classList.add('open');
+    let left = Math.min(r.left, window.innerWidth - columnFilterPopup.offsetWidth - 8);
+    left = Math.max(8, left);
+    let top = r.bottom + 6;
+    if (top + columnFilterPopup.offsetHeight > window.innerHeight - 8) top = r.top - columnFilterPopup.offsetHeight - 6;
+    columnFilterPopup.style.left = `${left}px`;
+    columnFilterPopup.style.top = `${Math.max(8, top)}px`;
+  }
+
+  // Closing without going through OK (Cancel, outside click, or Escape)
+  // always just discards pendingSelected — nothing is applied unless OK
+  // was clicked, matching Excel's own AutoFilter dropdown behavior.
+  function closeColumnFilterPopup() {
+    columnFilterPopup.classList.remove('open');
+    currentFilterColumnKey = null;
+    pendingSelected = null;
+  }
+
+  columnFilterPopup.addEventListener('click', (e) => {
+    const actionBtn = e.target.closest('[data-action]');
+    if (!actionBtn) return;
+    const action = actionBtn.dataset.action;
+    if (action === 'sort-asc' || action === 'sort-desc') {
+      activeSort = { key: currentFilterColumnKey, direction: action === 'sort-asc' ? 'asc' : 'desc' };
+      closeColumnFilterPopup();
+      renderTable();
+    } else if (action === 'clear-filter') {
+      delete activeFilters[currentFilterColumnKey];
+      closeColumnFilterPopup();
+      renderTable();
+    } else if (action === 'ok') {
+      const col = COLUMNS.find((c) => c.key === currentFilterColumnKey);
+      const { values, hasBlank } = uniqueValuesFor(col);
+      const allValues = new Set([...values, ...(hasBlank ? [''] : [])]);
+      const isEverythingSelected = allValues.size === pendingSelected.size
+        && [...allValues].every((v) => pendingSelected.has(v));
+      if (isEverythingSelected) delete activeFilters[currentFilterColumnKey];
+      else activeFilters[currentFilterColumnKey] = new Set(pendingSelected);
+      closeColumnFilterPopup();
+      renderTable();
+    } else if (action === 'cancel') {
+      closeColumnFilterPopup();
+    }
+  });
+
+  columnFilterPopup.addEventListener('change', (e) => {
+    if (e.target.matches('.column-filter-values input[type="checkbox"]')) {
+      const label = e.target.closest('label');
+      if (e.target.checked) pendingSelected.add(label.dataset.value);
+      else pendingSelected.delete(label.dataset.value);
+      updateSelectAllState();
+    } else if (e.target.matches('[data-role="select-all"]')) {
+      const visibleLabels = [...columnFilterPopup.querySelectorAll('.column-filter-values label')]
+        .filter((label) => label.style.display !== 'none');
+      visibleLabels.forEach((label) => {
+        label.querySelector('input').checked = e.target.checked;
+        if (e.target.checked) pendingSelected.add(label.dataset.value);
+        else pendingSelected.delete(label.dataset.value);
+      });
+    }
+  });
+
+  columnFilterPopup.addEventListener('input', (e) => {
+    if (!e.target.matches('.column-filter-search')) return;
+    const term = e.target.value.trim().toLowerCase();
+    columnFilterPopup.querySelectorAll('.column-filter-values label').forEach((label) => {
+      label.style.display = label.textContent.trim().toLowerCase().includes(term) ? '' : 'none';
+    });
+    updateSelectAllState();
+  });
+
+  document.querySelector('table.counts-table thead').addEventListener('click', (e) => {
+    const btn = e.target.closest('.column-filter-btn');
+    if (!btn) return;
+    e.stopPropagation();
+    openColumnFilterPopup(btn.dataset.column, btn);
+  });
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.column-filter-popup') && !e.target.closest('.column-filter-btn')) closeColumnFilterPopup();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeColumnFilterPopup();
+  });
+
+  // Reflects which columns currently have an active filter, since the
+  // filter icon itself lives in static HTML (rendered once) rather than
+  // being rebuilt by renderTable() on every filter/sort change.
+  function updateColumnFilterIndicators() {
+    document.querySelectorAll('.column-filter-btn').forEach((btn) => {
+      btn.classList.toggle('active', Boolean(activeFilters[btn.dataset.column]));
+    });
+  }
 
   loadCounts();
   loadItemMeta();

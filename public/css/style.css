@@ -335,6 +335,10 @@ table.counts-table th, table.counts-table td {
   border: 1px solid var(--border); padding: 8px 10px; text-align: left;
 }
 table.counts-table th { background: var(--bg); position: sticky; top: 0; font-weight: 700; }
+/* Flex lives on this inner wrapper, not the <th> itself — a <th> with
+   display: flex stops participating in the table's column-layout
+   algorithm entirely, breaking column-width alignment with <td>s below. */
+.th-inner { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
 /* System Inventory (10th column) only holds short numbers, but its long
    header name made auto-layout stretch it much wider than it needs. */
 table.counts-table th:nth-child(10), table.counts-table td:nth-child(10) {
@@ -357,6 +361,85 @@ table.counts-table th:nth-child(3), table.counts-table td:nth-child(3) {
   width: 110px;
 }
 .table-scroll { overflow-x: auto; border: 1.5px solid var(--border); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); }
+
+.th-label { overflow: hidden; text-overflow: ellipsis; }
+
+.column-filter-btn {
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  width: 22px; height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  box-shadow: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.column-filter-btn svg { width: 12px; height: 12px; }
+.column-filter-btn:hover { background: var(--border); color: var(--text); }
+.column-filter-btn.active { color: var(--color-primary); }
+.column-filter-btn.active:hover { color: var(--color-primary-dark); }
+
+/* Appended directly to <body>, not nested in .table-scroll — same reasoning
+   as .info-popover: that container's overflow-x: auto would otherwise
+   silently clip this on most columns. */
+.column-filter-popup {
+  display: none;
+  position: fixed;
+  z-index: 46;
+  width: 250px;
+  max-height: 380px;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 6px 0;
+  font-size: 0.85rem;
+}
+.column-filter-popup.open { display: block; }
+.column-filter-popup .dropdown-item[disabled] { color: var(--text-muted); cursor: default; }
+.column-filter-popup .dropdown-item[disabled]:hover { background: none; }
+.column-filter-popup hr { border: none; border-top: 1px solid var(--border); margin: 4px 0; }
+.column-filter-search {
+  display: block;
+  width: calc(100% - 24px);
+  margin: 6px 12px;
+  padding: 6px 8px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  background: var(--surface);
+  color: var(--text);
+}
+.column-filter-values {
+  max-height: 160px;
+  overflow-y: auto;
+  padding: 2px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.column-filter-values label {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-weight: 400;
+}
+.column-filter-values label:hover { background: var(--bg); }
+.column-filter-values label span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.column-filter-select-all {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.column-filter-actions {
+  display: flex; gap: 8px;
+  padding: 8px 12px 2px;
+}
+.column-filter-actions .btn { padding: 7px 10px; font-size: 0.85rem; }
 
 .info-icon {
   display: inline-flex; vertical-align: middle;
