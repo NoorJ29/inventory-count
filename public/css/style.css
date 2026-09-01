@@ -390,8 +390,9 @@ table.counts-table th:nth-child(3), table.counts-table td:nth-child(3) {
   position: fixed;
   z-index: 46;
   width: 250px;
-  max-height: 380px;
-  overflow-y: auto;
+  /* No max-height/overflow here on purpose — only .column-filter-values
+     below scrolls, so sort/search/select-all/OK/Cancel are always fully
+     visible without having to scroll the popup itself to reach them. */
   background: var(--surface);
   border: 1.5px solid var(--border);
   border-radius: var(--radius-md);
@@ -415,7 +416,7 @@ table.counts-table th:nth-child(3), table.counts-table td:nth-child(3) {
   color: var(--text);
 }
 .column-filter-values {
-  max-height: 160px;
+  max-height: 220px;
   overflow-y: auto;
   padding: 2px 0;
   border-top: 1px solid var(--border);
