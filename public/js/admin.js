@@ -11,6 +11,7 @@
   const itemMetaNotice = document.getElementById('itemMetaNotice');
   const btnClearItems = document.getElementById('btnClearItems');
   const btnEditMode = document.getElementById('btnEditMode');
+  const btnCopyTable = document.getElementById('btnCopyTable');
   const countsTable = document.querySelector('table.counts-table');
 
   // ---- Toolbar dropdowns (Export/Clear, Item List) ----
@@ -316,6 +317,25 @@
   });
 
   btnRefresh.addEventListener('click', loadCounts);
+
+  // Tab-separated so pasting into Excel/Sheets lands each value in its own
+  // cell — plain values only (via getDisplay), never the colored HTML spans
+  // cellHtml() uses for on-screen Difference/Difference Cost cells. Only the
+  // rows currently on screen (lastRenderedGroups) are copied, so an active
+  // filter/sort is respected; the totals row is display-only and never
+  // included here.
+  btnCopyTable.addEventListener('click', async () => {
+    const sanitize = (value) => String(value).replace(/[\t\n\r]+/g, ' ');
+    const header = COLUMNS.map((col) => sanitize(col.header)).join('\t');
+    const rows = lastRenderedGroups.map((g) => COLUMNS.map((col) => sanitize(col.getDisplay(g))).join('\t'));
+    const tsv = [header, ...rows].join('\n');
+    try {
+      await navigator.clipboard.writeText(tsv);
+      showAlert('Table copied — paste it into Excel.');
+    } catch (err) {
+      showAlert('Could not copy the table. Your browser may be blocking clipboard access.');
+    }
+  });
 
   let editMode = false;
   btnEditMode.addEventListener('click', () => {
