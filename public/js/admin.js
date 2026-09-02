@@ -1,6 +1,8 @@
 (function () {
   const countsBody = document.getElementById('countsBody');
   const summaryBar = document.getElementById('summaryBar');
+  const totalDifferenceCell = document.getElementById('totalDifferenceCell');
+  const totalDifferenceCostCell = document.getElementById('totalDifferenceCostCell');
   const btnExport = document.getElementById('btnExport');
   const btnReset = document.getElementById('btnReset');
   const btnRefresh = document.getElementById('btnRefresh');
@@ -222,12 +224,28 @@
 
   const TRASH_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
 
+  function sumColumn(groups, key) {
+    const col = COLUMNS.find((c) => c.key === key);
+    let total = 0;
+    let hasValue = false;
+    for (const g of groups) {
+      const raw = col.getRaw(g);
+      if (typeof raw === 'number') {
+        total += raw;
+        hasValue = true;
+      }
+    }
+    return hasValue ? total : undefined;
+  }
+
   function renderTable() {
     const visible = applyFiltersAndSort(lastGroups);
     lastRenderedGroups = visible;
     countsBody.innerHTML = visible.map((g, idx) => `
       <tr>${COLUMNS.map((col) => `<td>${cellHtml(col, g, idx)}</td>`).join('')}<td class="actions-col"><button type="button" class="icon-btn delete-row-btn" data-idx="${idx}" aria-label="Delete">${TRASH_ICON_SVG}</button></td></tr>
     `).join('');
+    totalDifferenceCell.innerHTML = formatDifference(sumColumn(visible, 'difference'));
+    totalDifferenceCostCell.innerHTML = formatDifferenceCost(sumColumn(visible, 'differenceCost'));
     summaryBar.textContent = Object.keys(activeFilters).length > 0
       ? `${visible.length} of ${lastGroups.length} row(s) shown (filtered).`
       : (lastGroups.length !== lastRawCount
