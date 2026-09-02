@@ -187,6 +187,10 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus {
 }
 .icon-btn svg { width: 17px; height: 17px; }
 .icon-btn:hover { background: var(--bg); color: var(--color-primary-dark); }
+/* Smaller variant for icons that live inside the thin totals row rather
+   than a full table row — the default 36px would blow out its height. */
+.icon-btn-sm { width: 22px; height: 22px; }
+.icon-btn-sm svg { width: 13px; height: 13px; }
 
 .empty-state { text-align: center; color: var(--text-muted); padding: 40px 0; }
 
@@ -358,6 +362,7 @@ table.counts-table tr.totals-row .totals-label {
   font-weight: 700;
   color: var(--text-muted);
 }
+.totals-label-inner { display: inline-flex; align-items: center; gap: 4px; }
 table.counts-table tr.totals-row td:empty::before { content: '\2013'; color: var(--text-muted); }
 /* Flex lives on this inner wrapper, not the <th> itself — a <th> with
    display: flex stops participating in the table's column-layout
