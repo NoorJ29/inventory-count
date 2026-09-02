@@ -231,10 +231,31 @@
   }
   btnCloseScan.addEventListener('click', closeScanModal);
 
+  // A wide, mostly-full-width box rather than a small fixed one — the
+  // barcode just needs to be roughly in frame, not precisely centered in a
+  // tiny rectangle. Still bounded (not the whole camera feed) so a second
+  // barcode elsewhere in shot doesn't get scanned by mistake.
+  function scanBoxSize(viewfinderWidth, viewfinderHeight) {
+    const width = Math.floor(viewfinderWidth * 0.9);
+    const height = Math.floor(Math.min(viewfinderHeight * 0.55, width * 0.4));
+    return { width, height };
+  }
+
+  // Purely cosmetic sweeping line over the video — html5-qrcode's own
+  // decode box has no animation, so this is a separate overlay added after
+  // start() inserts its video/canvas into #reader (adding it before would
+  // get wiped out by that insertion).
+  function addScanOverlay() {
+    const overlay = document.createElement('div');
+    overlay.className = 'scan-line-overlay';
+    overlay.innerHTML = '<div class="scan-line"></div>';
+    reader.appendChild(overlay);
+  }
+
   function startScanner() {
     if (scannerRunning) return;
     html5QrCode = new Html5Qrcode('reader');
-    const config = { fps: 10, qrbox: { width: 250, height: 120 } };
+    const config = { fps: 10, qrbox: scanBoxSize };
     html5QrCode.start(
       { facingMode: 'environment' },
       config,
@@ -244,6 +265,7 @@
       () => { /* ignore per-frame scan failures */ }
     ).then(() => {
       scannerRunning = true;
+      addScanOverlay();
     }).catch((err) => {
       scanError.textContent = 'Camera unavailable: ' + err + '. You can still enter the code manually below.';
       scanError.classList.remove('hidden');
